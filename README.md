@@ -1,5 +1,9 @@
 # ASD-STE100 Skill — Simplified Technical English for Agent Output
 
+> **Fork com suporte a pt-BR.** Este fork adiciona o perfil de português do Brasil ao linter (`--lang auto|en|pt`, regra extra `gerundism`), a referência [`references/ptbr.md`](references/ptbr.md) e os exemplos [`examples/antes-depois-ptbr.md`](examples/antes-depois-ptbr.md). A saída em inglês é idêntica à do original.
+>
+> Instalação: `npx skills add gabriel-sousa99/asd-ste100-skill -g -a claude-code`. Original: [danyuchn/asd-ste100-skill](https://github.com/danyuchn/asd-ste100-skill).
+
 A Claude Code skill that rewrites dense, ambiguous English into [ASD-STE100 Simplified Technical English](https://www.asd-ste100.org/) (STE) — the controlled-language standard the aerospace and defense industry built so aircraft maintenance instructions cannot be misread.
 
 This skill repurposes that same discipline for a different reader: an **AI agent** parsing another agent's output, a tool description, an error message, or an inter-agent instruction, with no human in the loop to resolve ambiguity.
