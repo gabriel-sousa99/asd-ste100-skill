@@ -125,7 +125,7 @@ Feita para: mensagens entre agentes, descrições de ferramentas e funções, me
 
 Não é para: texto criativo, texto de marketing ou qualquer texto em que a voz e a nuance são o objetivo. O STE é plano e literal de propósito.
 
-Para eliminar LLM-ês de documentos que pessoas leem (ADR, spec, descrição de MR, Jira), use uma skill de escrita técnica, como a `unimed-vr-escrita-tecnica`.
+Para eliminar LLM-ês de documentos que pessoas leem (ADR, spec, descrição de MR, Jira), use uma skill de escrita técnica.
 
 Um limite vale desde já: a skill corrige a forma do texto, não o conteúdo. Um parágrafo sem nada a dizer sai curto, limpo e ainda vazio.
 

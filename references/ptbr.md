@@ -8,14 +8,14 @@ Leia este arquivo antes da primeira reescrita em pt-BR de uma sessão.
 
 Texto em português sai em português. Nunca traduza para inglês para aplicar o STE e depois traduza de volta. A tradução muda palavras, e cada palavra trocada pode mudar o sentido.
 
-## Esta skill ou a unimed-vr-escrita-tecnica
+## Esta skill ou uma skill de escrita técnica
 
 | Situação | Skill |
 |---|---|
 | Um agente, uma ferramenta ou um sistema lê o texto sem poder perguntar nada: descrição de ferramenta, mensagem de erro, prompt, instrução entre agentes, status | `asd-ste100` |
-| Uma pessoa lê o texto: ADR, spec, README, descrição de MR, comentário no Jira, e o problema é LLM-ês, jargão vazio ou falta de template | `unimed-vr-escrita-tecnica` |
+| Uma pessoa lê o texto: ADR, spec, README, descrição de MR, comentário no Jira, e o problema é LLM-ês, jargão vazio ou falta de template | uma skill de escrita técnica |
 
-As duas combinam. Um prompt em português pode passar pela lista negra da `unimed-vr-escrita-tecnica` e depois pelas regras abaixo.
+As duas combinam. Um prompt em português pode passar primeiro por uma lista de jargão a evitar e depois pelas regras abaixo.
 
 ## Regras estruturais adaptadas
 
