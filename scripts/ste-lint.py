@@ -220,8 +220,8 @@ PROFILES = {
 }
 
 PT_MARKERS = frozenset(
-    "o e não que de do da dos das para com uma um os é são em no na se por ao "
-    "pelo pela isso este esta".split())
+    "o e não que de do da dos das para com uma um os é são em na se por ao "
+    "pelo pela isso este esta à às ou nos nas seu sua".split())
 EN_MARKERS = frozenset(
     "the and of to is are that with for this it be on not you".split())
 
@@ -611,6 +611,7 @@ def selftest_pt():
     assert detect_lang("The file is removed and the job is done.") == "en"
     assert detect_lang("O arquivo não foi removido e o job terminou.") == "pt"
     assert detect_lang("a; b") == "en"
+    assert detect_lang("No, do it again.") == "en"
     bad = ("O arquivo foi removido; vou estar enviando o relatório. "
            "Realize a validação do sistema robusto. Faça uso de cache. "
            "O job tem falhado.")

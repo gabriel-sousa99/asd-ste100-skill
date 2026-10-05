@@ -58,7 +58,7 @@ O linter aponta a troca de sinônimos dentro de um mesmo arquivo nestes grupos, 
 - enviar, mandar, transmitir
 - alterar, modificar, mudar
 
-Escolha um verbo por ação e use sempre o mesmo.
+Escolha um verbo por ação e use sempre o mesmo. Os substantivos da ação também contam: "verificação", "uso" e "envio". Por isso, "O uso do cache é opcional. Utilize-o." conta como troca de sinônimo.
 
 ## O que o linter pt-BR não pega
 
