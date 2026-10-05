@@ -10,6 +10,7 @@ Usage:
     echo "text" | ste-lint.py [--json]
     ste-lint.py --baseline 5 FILE      # pass unless hard violations exceed 5
     ste-lint.py --disable passive-voice,present-perfect FILE
+    ste-lint.py --lang pt FILE         # força o perfil pt-BR (padrão: auto por arquivo)
     ste-lint.py --selftest
 
 Exit 1 when hard ("advisory-free") violations exceed the baseline (default 0).
@@ -70,6 +71,83 @@ SYNONYM_GROUPS = [
     ("change", "modify", "alter"),
 ]
 
+# Português (pt-BR). Mesmas IDs de regra do inglês, para --disable valer nos dois
+# idiomas. "gerundism" só existe aqui. Ressalvas ("pode ter falhado", "pode estar
+# falhando", "talvez") continuam fora de qualquer regra.
+# Particípio regular sem acento no radical: "validado", "excluído" sim, "válido" não.
+# O radical de 3+ letras deixa "dados" de fora. A exclusão cobre substantivos
+# comuns em -ado/-ido ("tem sentido", "é resultado de").
+PT_PARTICIPLE = (
+    r"(?!(?:sentido|cuidado|resultado|significado|partido)s?\b)"
+    r"(?:[a-zç]{3,}(?:ad|id)[oa]s?|[a-zç]{2,}uíd[oa]s?"
+    r"|(?:feit|dit|escrit|abert|post|vist|cobert|aceit|pag|gast|impress|express"
+    r"|elet|pres|solt|suspens|extint)[oa]s?|entregues?)"
+)
+
+RULES_PT = [
+    ("semicolon", "advisory-free",
+     re.compile(r";"),
+     "O STE proíbe o ponto e vírgula (regra 8.1). Divida em frases separadas."),
+    ("phrasal-verb", "advisory-free",
+     re.compile(r"\b(?:f(?:az|azer|azem|aça|açam|ez|izemos|izeram|azendo|eito)\s+uso\s+d[eoa]s?"
+                r"|d(?:ar|á|ê|eu|ão|ando|ou)\s+início"
+                r"|lev\w*\s+em\s+consideração"
+                r"|entr\w*\s+em\s+contato"
+                r"|a\s+fim\s+de|com\s+o\s+objetivo\s+de|no\s+que\s+diz\s+respeito"
+                r"|(?:coloc\w*|pôr|por|põe|pôs)\s+em\s+prática"
+                r"|d\w*\s+uma\s+olhada"
+                r"|tom\w*\s+(?:a|uma)\s+decisão"
+                r"|alavanc\w*|mergulh\w*\s+fundo)\b", re.I),
+     "Locução verbal inflada. Use o verbo simples (usar, iniciar, considerar, contatar, para, decidir)."),
+    ("marketing-adjective", "advisory-free",
+     re.compile(r"\b(?:robust(?:o|a|os|as|ez)|poderos[oa]s?|potentes?|de\s+ponta"
+                r"|de\s+última\s+geração|revolucionári[oa]s?|disruptiv[oa]s?"
+                r"|inovador(?:a|es|as)?|sem\s+emendas|fluid(?:o|a|os|as|ez|amente)"
+                r"|simplesmente|facilmente|incrivelmente|extremamente|altamente"
+                r"|elegantes?|seamless(?:ly)?|cutting-edge|state-of-the-art"
+                r"|game-chang(?:ing|er))\b", re.I),
+     "Adjetivo de venda. Corte, ou troque pelo número ou comportamento que o justifica."),
+    ("nominalization", "advisory-free",
+     re.compile(r"\b(?:(?:realiz|efetu|promov|proced)\w*"
+                r"|f(?:az|azer|azem|aça|açam|ez|izemos|izeram|azendo|eito))"
+                r"\s+(?:à|às|ao|aos|a|o|as|os|uma|um)\s+"
+                r"[a-zçãõáéíóúâêô]+(?:ção|ções|são|sões|mento|mentos|agem|agens|ise|ises)\b",
+                re.I),
+     "Ação congelada em substantivo (verbo-suporte). Use o verbo: validar, não realizar a validação."),
+    ("gerundism", "advisory-free",
+     # Só "ir/estarei + estar + gerúndio". "pode estar falhando" é ressalva e fica livre.
+     re.compile(r"\b(?:(?:vou|vais|vai|vamos|vão|irei|irá|iremos|irão)\s+estar"
+                r"|estarei|estaremos)\s+[a-zç]+ndo\b", re.I),
+     "Gerundismo. Use o verbo no futuro ou no presente (vou enviar, enviamos)."),
+    ("passive-voice", "advisory",
+     re.compile(r"\b(?:é|são|foi|foram|era|eram|será|serão|seria|seriam|seja|sejam"
+                r"|fosse|fossem|ser|sido|sendo)\s+(?:dad[oa]s?|" + PT_PARTICIPLE + r")\b"
+                r"|\b(?!(?:trata|tratam|torna|tornam)-se\b)(?:[a-zç]+am?-se"
+                r"|faz-se|fazem-se|deve-se|devem-se|pode-se|podem-se)\b", re.I),
+     "Possível voz passiva. Nomeie quem age e use a voz ativa, a menos que o agente seja desconhecido ou irrelevante."),
+    ("present-perfect", "advisory",
+     # "pode ter falhado" usa o infinitivo "ter" e não casa: a ressalva fica protegida.
+     re.compile(r"\b(?:tem|têm|tenho|temos|tinha|tinhas|tinham|tínhamos|havia|haviam"
+                r"|terá|terão|teria|teriam|tiver|tiverem|tivesse|tivessem)\s+"
+                r"(?:sido\s+)?(?:sido|" + PT_PARTICIPLE + r")\b", re.I),
+     "Tempo composto. Use o passado ou o presente simples, a menos que o sentido de repetição ou continuidade importe (aí mantenha e sinalize)."),
+]
+
+# Um verbo por ação. As formas são geradas a partir do infinitivo. Grupos com
+# formas que colidem com palavras comuns ("para" de parar, "repare que") ficam de fora.
+SYNONYM_GROUPS_PT = [
+    ("verificar", "conferir", "checar", "validar", "confirmar"),
+    ("excluir", "remover", "apagar", "deletar"),
+    ("iniciar", "começar"),
+    ("mostrar", "exibir"),
+    ("usar", "utilizar", "empregar"),
+    ("corrigir", "consertar"),
+    ("enviar", "mandar", "transmitir"),
+    ("alterar", "modificar", "mudar"),
+]
+PT_VERB_EXTRA = {"conferir": ("confiro", "confira", "confiras", "confiram", "confiramos")}
+PT_VERB_EXCLUDE = {"empregar": ("emprego", "empregos")}
+
 MAX_WORDS = 25  # descriptions cap; instructions cap is 20 but undetectable without context
 
 CODE_FENCE = re.compile(r"^(```|~~~)")
@@ -83,6 +161,77 @@ TABLE_SEPARATOR_CELL = re.compile(r"^:?-{3,}:?$")
 
 def _word_re(base):
     return re.compile(r"\b" + base + r"(?:s|es|ed|d|ing)?\b", re.I)
+
+
+def _pt_verb_re(infinitive):
+    """Formas comuns de um verbo regular, com a troca ortográfica do radical
+    (verificar → verifique, corrigir → corrija, excluir → excluído)."""
+    stem, ending = infinitive[:-2], infinitive[-2:]
+    last = stem[-1]
+    if ending == "ar":
+        before_e = stem[:-1] + {"c": "qu", "g": "gu", "ç": "c"}.get(last, last)
+        forms = [stem + e for e in (
+            "ar", "o", "a", "as", "am", "amos", "ou", "aram", "ava", "avam", "ando",
+            "ado", "ada", "ados", "adas", "ará", "arão", "aria", "ariam", "asse",
+            "assem", "ação", "ações")]
+        forms += [before_e + e for e in ("e", "es", "em", "emos", "ei")]
+    else:
+        before_a = stem[:-1] + {"c": "ç", "g": "j"}.get(last, last)
+        vowel = "e" if ending == "er" else "i"
+        forms = [stem + e for e in (
+            ending, "e", "es", "em", vowel + "mos", vowel + "u" if vowel == "i" else "eu",
+            vowel + "ram", "ia", "iam", vowel + "ndo", "ido", "ida", "idos", "idas",
+            vowel + "rá", vowel + "rão", vowel + "ria", vowel + "riam", vowel + "sse",
+            vowel + "ssem")]
+        forms += [before_a + e for e in ("o", "a", "as", "am", "amos")]
+        if last in "aeiou":  # excluir: exclui, excluí, excluído
+            forms += [stem + e for e in ("i", "í", "ído", "ída", "ídos", "ídas")]
+    forms = (set(forms) | set(PT_VERB_EXTRA.get(infinitive, ()))) - set(
+        PT_VERB_EXCLUDE.get(infinitive, ()))
+    alternatives = "|".join(sorted(map(re.escape, forms), key=len, reverse=True))
+    return re.compile(r"\b(?:" + alternatives + r")\b", re.I)
+
+
+PROFILES = {
+    "en": {
+        "rules": RULES,
+        "synonyms": [[(base, _word_re(base)) for base in group]
+                     for group in SYNONYM_GROUPS],
+        "modal_perfect_prefix": MODAL_PERFECT_PREFIX,
+        "conjunction_end": CONJUNCTION_END,
+        "long": "Sentence has {n} words (cap {cap}). Split it.",
+        "words": "{n} words",
+        "rotation": "'{base}' and '{first}' name the same action. Pick one and use it every time.",
+        "dangling": "List item ends with a coordinating conjunction. Complete the item or join it with the next item.",
+        "hedges": "Hedges/modality (may, might, could) are never flagged: confidence is content.",
+    },
+    "pt": {
+        "rules": RULES_PT,
+        "synonyms": [[(base, _pt_verb_re(base)) for base in group]
+                     for group in SYNONYM_GROUPS_PT],
+        "modal_perfect_prefix": None,
+        "conjunction_end": re.compile(r"\b(?:e|ou)\s*$", re.I),
+        "long": "Frase com {n} palavras (limite {cap}). Divida.",
+        "words": "{n} palavras",
+        "rotation": "'{base}' e '{first}' nomeiam a mesma ação. Escolha um e use sempre o mesmo.",
+        "dangling": "Item de lista termina em conjunção. Complete o item ou junte-o ao próximo.",
+        "hedges": "Ressalvas (pode, talvez, possivelmente) nunca são apontadas: a confiança faz parte do conteúdo.",
+    },
+}
+
+PT_MARKERS = frozenset(
+    "o e não que de do da dos das para com uma um os é são em no na se por ao "
+    "pelo pela isso este esta".split())
+EN_MARKERS = frozenset(
+    "the and of to is are that with for this it be on not you".split())
+
+
+def detect_lang(text):
+    """Escolhe o perfil pela contagem de palavras funcionais. Empate → inglês."""
+    words = re.findall(r"[^\W\d_]+", text.lower())
+    pt = sum(word in PT_MARKERS for word in words)
+    en = sum(word in EN_MARKERS for word in words)
+    return "pt" if pt > en else "en"
 
 
 def _leading_spaces(line):
@@ -157,7 +306,8 @@ def _markdown_table_cells(lines):
     return table_cells
 
 
-def _dangling_conjunction_findings(text, filename):
+def _dangling_conjunction_findings(text, filename, profile):
+    conjunction_end = profile["conjunction_end"]
     lines = text.splitlines()
     findings = []
     in_fence = False
@@ -207,7 +357,7 @@ def _dangling_conjunction_findings(text, filename):
                 meaningful.append((line_index, cleaned))
         if meaningful:
             end_line_index, end_line = meaningful[-1]
-            conjunction = CONJUNCTION_END.search(end_line)
+            conjunction = conjunction_end.search(end_line)
         else:
             end_line_index, end_line, conjunction = None, None, None
         if conjunction:
@@ -222,7 +372,7 @@ def _dangling_conjunction_findings(text, filename):
                 masked_end_line = INLINE_CODE.sub(
                     lambda match: " " * len(match.group(0)), raw_end_line
                 )
-                raw_conjunction = CONJUNCTION_END.search(masked_end_line)
+                raw_conjunction = conjunction_end.search(masked_end_line)
                 finding_line = end_line_index + 1
                 finding_col = raw_conjunction.start() + 1 if raw_conjunction else 1
             findings.append({
@@ -232,13 +382,17 @@ def _dangling_conjunction_findings(text, filename):
                 "rule": "dangling-conjunction",
                 "level": "advisory-free",
                 "match": end_line,
-                "message": "List item ends with a coordinating conjunction. Complete the item or join it with the next item.",
+                "message": profile["dangling"],
             })
         index = next_index
     return findings
 
 
-def lint(text, filename="<stdin>"):
+def lint(text, filename="<stdin>", lang="auto"):
+    if lang == "auto":
+        lang = detect_lang(text)
+    profile = PROFILES[lang]
+    modal_perfect_prefix = profile["modal_perfect_prefix"]
     findings = []
     words_total = 0
     in_fence = False
@@ -256,21 +410,20 @@ def lint(text, filename="<stdin>"):
         for segment, source_column in segments:
             line = INLINE_CODE.sub("", segment)
             words_total += len(line.split())
-            for rule_id, level, pattern, msg in RULES:
+            for rule_id, level, pattern, msg in profile["rules"]:
                 for m in pattern.finditer(line):
-                    if rule_id == "present-perfect" and MODAL_PERFECT_PREFIX.search(
-                        line[:m.start()]
-                    ):
+                    if (rule_id == "present-perfect" and modal_perfect_prefix
+                            and modal_perfect_prefix.search(line[:m.start()])):
                         continue
                     findings.append({"file": filename, "line": lineno,
                                      "col": source_column + m.start() + 1,
                                      "rule": rule_id, "level": level,
                                      "match": m.group(0), "message": msg})
-            for gi, group in enumerate(SYNONYM_GROUPS):
-                for base in group:
+            for gi, group in enumerate(profile["synonyms"]):
+                for base, base_re in group:
                     if (gi, base) in seen_synonyms:
                         continue
-                    m = _word_re(base).search(line)
+                    m = base_re.search(line)
                     if m:
                         seen_synonyms[(gi, base)] = (
                             lineno, source_column + m.start() + 1, m.group(0)
@@ -281,11 +434,11 @@ def lint(text, filename="<stdin>"):
                     findings.append({"file": filename, "line": lineno,
                                      "col": source_column + 1,
                                      "rule": "long-sentence", "level": "advisory-free",
-                                     "match": f"{n} words",
-                                     "message": f"Sentence has {n} words (cap {MAX_WORDS}). Split it."})
+                                     "match": profile["words"].format(n=n),
+                                     "message": profile["long"].format(n=n, cap=MAX_WORDS)})
     # synonym rotation: flag each member after the first, at its first occurrence
-    for gi, group in enumerate(SYNONYM_GROUPS):
-        present = [(seen_synonyms[(gi, b)], b) for b in group if (gi, b) in seen_synonyms]
+    for gi, group in enumerate(profile["synonyms"]):
+        present = [(seen_synonyms[(gi, b)], b) for b, _ in group if (gi, b) in seen_synonyms]
         if len(present) > 1:
             present.sort()  # document order
             first_base = present[0][1]
@@ -293,24 +446,28 @@ def lint(text, filename="<stdin>"):
                 findings.append({"file": filename, "line": lineno, "col": col,
                                  "rule": "synonym-rotation", "level": "advisory-free",
                                  "match": match,
-                                 "message": f"'{base}' and '{first_base}' name the same action. Pick one and use it every time."})
-    findings.extend(_dangling_conjunction_findings(text, filename))
+                                 "message": profile["rotation"].format(base=base, first=first_base)})
+    findings.extend(_dangling_conjunction_findings(text, filename, profile))
+    for finding in findings:
+        finding["lang"] = lang
     findings.sort(key=lambda f: (f["line"], f["col"]))
     return findings, words_total
 
 
-def report(findings, words_total, as_json, hard_count, baseline):
+def report(findings, words_total, as_json, hard_count, baseline, langs):
     rate = round(len(findings) * 100 / words_total, 1) if words_total else 0.0
     if as_json:
         print(json.dumps({"violations": findings, "count": len(findings),
                           "hard_count": hard_count, "baseline": baseline,
-                          "words": words_total, "per_100_words": rate}, indent=2))
+                          "words": words_total, "per_100_words": rate,
+                          "langs": sorted(langs)}, indent=2))
         return
     for f in findings:
         print(f"{f['file']}:{f['line']}:{f['col']} {f['rule']}: {f['message']} [{f['match']}]")
     print(f"\n{len(findings)} violations ({hard_count} hard, baseline {baseline}), "
           f"{words_total} words, {rate} per 100 words")
-    print("Hedges/modality (may, might, could) are never flagged: confidence is content.")
+    for lang in sorted(langs):
+        print(PROFILES[lang]["hedges"])
 
 
 def selftest():
@@ -443,7 +600,58 @@ def selftest():
     # per-file labels
     findings, _ = lint("a; b", filename="x.md")
     assert findings[0]["file"] == "x.md"
+    selftest_pt()
     print("selftest OK")
+
+
+def selftest_pt():
+    def rules_of(text, **kwargs):
+        return [f["rule"] for f in lint(text, **kwargs)[0]]
+
+    assert detect_lang("The file is removed and the job is done.") == "en"
+    assert detect_lang("O arquivo não foi removido e o job terminou.") == "pt"
+    assert detect_lang("a; b") == "en"
+    bad = ("O arquivo foi removido; vou estar enviando o relatório. "
+           "Realize a validação do sistema robusto. Faça uso de cache. "
+           "O job tem falhado.")
+    rules = set(rules_of(bad))
+    for expected in ("semicolon", "passive-voice", "gerundism", "nominalization",
+                     "marketing-adjective", "phrasal-verb", "present-perfect"):
+        assert expected in rules, (expected, rules)
+    # Ressalvas nunca são apontadas, inclusive "pode estar + gerúndio".
+    assert rules_of("A requisição pode ter falhado. Talvez seja um timeout. "
+                    "Possivelmente o disco encheu. O serviço pode estar falhando. "
+                    "A tarefa deve ter terminado.") == []
+    # Falsos positivos conhecidos: adjetivo em -ido, "tem dados", "tem sentido",
+    # "executar a migração", "usuário" não é forma de "usar", "para" não é verbo.
+    assert rules_of("O campo é válido. A tabela tem dados. Isso tem sentido. "
+                    "Execute a migração. O usuário envia o arquivo para o servidor.") == []
+    findings, _ = lint("O usuário utiliza o sistema. Use o cache.")
+    rot = [f for f in findings if f["rule"] == "synonym-rotation"]
+    assert len(rot) == 1 and "'usar' e 'utilizar'" in rot[0]["message"], rot
+    # Conjugação e ortografia: verifique/confira, excluído/removido.
+    findings, _ = lint("Verifique o log. Depois confira a saída. "
+                       "O arquivo foi excluído e depois removido.")
+    rot = sorted(f["match"] for f in findings if f["rule"] == "synonym-rotation")
+    assert rot == ["confira", "removido"], rot
+    assert any(f["rule"] == "passive-voice" and f["match"] == "foi excluído"
+               for f in findings), findings
+    assert "gerundism" in rules_of("Estaremos analisando o pedido.")
+    assert "nominalization" in rules_of("Proceda à validação do arquivo.")
+    assert "nominalization" in rules_of("O sistema realiza o processamento do lote.")
+    assert "phrasal-verb" in rules_of("Entre em contato com o time a fim de liberar.")
+    # Passiva sintética com "-se": aponta a que esconde o agente, não o imperativo.
+    assert rules_of("Recomenda-se reiniciar o serviço.") == ["passive-voice"]
+    assert rules_of("Certifique-se de que o serviço subiu. Trata-se de um bug.") == []
+    findings, _ = lint("- Configure o alvo e\n- Registre o resultado ou\n- Feche o painel")
+    dangling = [f for f in findings if f["rule"] == "dangling-conjunction"]
+    assert [f["line"] for f in dangling] == [1, 2], dangling
+    assert "Complete o item" in dangling[0]["message"]
+    findings, _ = lint(" ".join(["palavra"] * 30) + " do sistema.")
+    long_sentences = [f for f in findings if f["rule"] == "long-sentence"]
+    assert len(long_sentences) == 1 and "palavras" in long_sentences[0]["message"]
+    # --lang força o perfil: texto em português lido como inglês só pega o ";".
+    assert rules_of("O arquivo foi removido; vou estar enviando.", lang="en") == ["semicolon"]
 
 
 def main(argv):
@@ -453,6 +661,7 @@ def main(argv):
     as_json = "--json" in argv
     baseline = 0
     disabled = set()
+    lang = "auto"
     paths = []
     i = 0
     while i < len(argv):
@@ -460,6 +669,12 @@ def main(argv):
         if a == "--baseline":
             i += 1
             baseline = int(argv[i])
+        elif a == "--lang":
+            i += 1
+            lang = argv[i]
+            if lang not in ("auto", *PROFILES):
+                print(f"--lang must be auto, {', '.join(PROFILES)}", file=sys.stderr)
+                return 2
         elif a == "--disable":
             i += 1
             disabled = set(argv[i].split(","))
@@ -467,18 +682,19 @@ def main(argv):
             paths.append(a)
         i += 1
 
-    findings, words_total = [], 0
-    if paths:
-        for p in paths:
-            f, w = lint(open(p, encoding="utf-8").read(), filename=p)
-            findings.extend(f)
-            words_total += w
-    else:
-        findings, words_total = lint(sys.stdin.read())
+    findings, words_total, langs = [], 0, set()
+    sources = ([(open(p, encoding="utf-8").read(), p) for p in paths]
+               or [(sys.stdin.read(), "<stdin>")])
+    for text, name in sources:
+        resolved = detect_lang(text) if lang == "auto" else lang
+        langs.add(resolved)
+        f, w = lint(text, filename=name, lang=resolved)
+        findings.extend(f)
+        words_total += w
 
     findings = [f for f in findings if f["rule"] not in disabled]
     hard_count = sum(1 for f in findings if f["level"] == "advisory-free")
-    report(findings, words_total, as_json, hard_count, baseline)
+    report(findings, words_total, as_json, hard_count, baseline, langs)
     return 1 if hard_count > baseline else 0
 
 
