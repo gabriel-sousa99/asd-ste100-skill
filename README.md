@@ -1,106 +1,142 @@
-# ASD-STE100 Skill — Simplified Technical English for Agent Output
+# Skill ASD-STE100: Simplified Technical English para saída de agentes
 
-> **Fork com suporte a pt-BR.** Este fork adiciona o perfil de português do Brasil ao linter (`--lang auto|en|pt`, regra extra `gerundism`), a referência [`references/ptbr.md`](references/ptbr.md) e os exemplos [`examples/antes-depois-ptbr.md`](examples/antes-depois-ptbr.md). A saída em inglês é idêntica à do original.
+Skill do Claude Code que reescreve texto denso ou ambíguo no padrão [ASD-STE100 Simplified Technical English](https://www.asd-ste100.org/) (STE), em inglês ou em português do Brasil. O STE é a linguagem controlada que a indústria aeroespacial e de defesa criou para que ninguém leia errado uma instrução de manutenção de aeronave.
+
+A skill usa a mesma disciplina para outro leitor: um **agente de IA** que lê a saída de outro agente, a descrição de uma ferramenta, uma mensagem de erro ou uma instrução entre agentes. Nesses casos, não há uma pessoa para resolver a ambiguidade.
+
+> **Fork com suporte a pt-BR.** Este fork acrescenta ao original:
 >
-> Instalação: `npx skills add gabriel-sousa99/asd-ste100-skill -g -a claude-code`. Original: [danyuchn/asd-ste100-skill](https://github.com/danyuchn/asd-ste100-skill).
+> - um perfil de português do Brasil no linter (`--lang auto|en|pt`) e a regra extra `gerundism`;
+> - a referência [`references/ptbr.md`](references/ptbr.md), com as regras adaptadas e os casos em que o português muda o sentido;
+> - os exemplos [`examples/antes-depois-ptbr.md`](examples/antes-depois-ptbr.md).
+>
+> A saída do linter para texto em inglês é idêntica à do original: [danyuchn/asd-ste100-skill](https://github.com/danyuchn/asd-ste100-skill).
 
-A Claude Code skill that rewrites dense, ambiguous English into [ASD-STE100 Simplified Technical English](https://www.asd-ste100.org/) (STE) — the controlled-language standard the aerospace and defense industry built so aircraft maintenance instructions cannot be misread.
+## Por que STE, e por que para agentes
 
-This skill repurposes that same discipline for a different reader: an **AI agent** parsing another agent's output, a tool description, an error message, or an inter-agent instruction, with no human in the loop to resolve ambiguity.
+O STE existe porque uma instrução mal lida numa aeronave pode matar. Os leitores eram, muitas vezes, técnicos que não tinham o inglês como língua materna e não podiam ligar para o autor. A solução do padrão: uma palavra com um só sentido, voz ativa, tempos simples, uma instrução por frase, frases curtas e nenhuma palavra omitida.
 
-## Why STE, and Why for Agents
+Um agente que lê a saída de outro agente está numa situação parecida. Ele não tem como perguntar "você quis dizer X ou Y?". As regras que impedem um mecânico de ler errado um torque de aperto também impedem um agente de ler errado a descrição de uma ferramenta.
 
-STE exists because a misread instruction on an aircraft can kill people, and the intended readers were often not native English speakers with no author to call for clarification. The standard's fix: one meaning per word, active voice, simple tenses, one instruction per sentence, short sentences, no dropped words.
+## Antes e depois
 
-An LLM agent parsing another agent's output is in a strikingly similar position — no back-channel, no way to ask "did you mean X or Y?" The same rules that keep a mechanic from misreading a torque spec keep a downstream agent from misreading a tool description or an inter-agent message.
-
-## Before / After
-
-| Before | After |
+| Antes | Depois |
 |---|---|
+| "Pode ter ocorrido um erro durante o processamento da sua solicitação devido a uma possível incompatibilidade no formato de dados esperado, o que poderia ser causado por uma versão desatualizada do cliente." | "Sua solicitação pode ter falhado. A causa pode ser um formato de dados diferente do que o servidor espera. Uma versão desatualizada do cliente pode causar essa diferença. Verifique a versão do cliente." |
 | "This tool will attempt to synchronize state across the various backends that have been configured, and if a conflict is detected it may resolve it automatically depending on the strategy that has been set, or otherwise it will surface the conflict for manual review." | "The tool tries to synchronize state across the configured backends. If it finds a conflict, it reads the configured strategy. If the strategy allows automatic resolution, the tool may resolve the conflict without a user. If the tool does not resolve the conflict, it reports the conflict for manual review." |
-| "An error may have occurred while processing your request due to a possible mismatch in the expected data format, which could be caused by an outdated client version." | "Your request may have failed. The cause may be a data format that does not match what the server expects. An outdated client can cause this mismatch. Check your client version." |
 
-More examples, including illustrations of the official STE rules themselves, in [`examples/before-after.md`](examples/before-after.md).
+Mais exemplos em [`examples/antes-depois-ptbr.md`](examples/antes-depois-ptbr.md) (pt-BR) e [`examples/before-after.md`](examples/before-after.md) (inglês, com ilustrações das regras oficiais do STE).
 
-## What This Skill Does
+## O que a skill faz
 
-1. Picks a mode. **Strict** covers procedures, error messages, and tool descriptions. **STE-flavored** covers READMEs, PR descriptions, and explanatory prose. STE-flavored keeps the sentence discipline but not the fixed-vocabulary lockdown.
-2. Reads the input English text for meaning.
-3. Flags every rule violation sentence-by-sentence: ambiguous word choice, present-perfect/complex tense, passive voice with an unclear actor, multi-instruction sentences, oversized noun clusters, dropped words, sentences over length, phrasal verbs, nominalized actions, semicolons, hedge stacks, and marketing adjectives.
-4. Rewrites each flagged sentence — without dropping any fact, condition, or scope qualifier from the original. If a shorter phrasing would lose required precision, it keeps the longer phrasing and flags the trade-off instead of silently simplifying.
-5. Outputs the rewritten text on its own — no preamble, no mode announcement, no change summary — plus a one-line `Kept as-is:` note when it deliberately left something unsimplified.
+1. Escolhe um modo. O **estrito** vale para procedimentos, mensagens de erro e descrições de ferramenta. O **com sabor de STE** vale para READMEs, descrições de PR e textos explicativos. Ele mantém a disciplina das frases, mas não trava o vocabulário.
+2. Lê o texto uma vez para entender o sentido.
+3. Aponta cada violação, frase por frase. Exemplos: palavra ambígua, tempo composto, voz passiva sem agente claro, várias instruções numa frase, grupo nominal longo, palavra omitida, frase longa demais, locução verbal, verbo-suporte, ponto e vírgula, ressalva empilhada e adjetivo de venda.
+4. Reescreve cada frase apontada sem perder nenhum fato, condição ou limite de escopo. Se a versão curta perder precisão, a skill mantém a versão longa e avisa.
+5. Devolve só o texto reescrito: sem introdução, sem anunciar o modo, sem resumo das mudanças. Quando mantém algo de propósito, acrescenta uma linha `Mantido como está:` (`Kept as-is:` em inglês).
 
-Ask for the reasoning ("show the diff", "which rules did it break") and it outputs a before/after table naming each rule instead.
+Para ver o raciocínio, peça "mostra o diff" ou "quais regras foram violadas". A skill devolve uma tabela de antes e depois com o nome de cada regra.
 
-The structural rules it checks are mechanical — you can point at the word or punctuation mark that breaks each one. The rules that depend on ASD's dictionary are flagged as advisory rather than enforced, and the rules that need taste are left to you.
+Texto em português sai em português. A skill nunca traduz para o inglês e de volta, porque cada palavra traduzida pode mudar o sentido.
 
-The linter checks structural patterns only. It does not compare an original text with a rewrite, verify that requirement strength stayed the same, or prove that the rewrite preserved meaning. A zero-violation result means that the configured structural checks found no problems.
+## Linter
 
-The deterministic linter checks semicolons, a short list of soft phrasal verbs (spin up, reach out, dive into, kick off, circle back, touch base), nominalizations, marketing adjectives, passive voice, present-perfect forms (including irregular participles such as "has run"), long sentences, synonym rotation, and dangling conjunctions in supported list items. It does not check noun-cluster length (that needs part-of-speech tagging) and it does not know phrasal verbs outside its list, so "take off the panel" passes. It never flags hedges or modality.
-
-The repo's own prose does not lint clean: the rule tables quote the patterns they forbid, and some sentences run long. Lint it with `python scripts/ste-lint.py --baseline 41 SKILL.md` and read the findings as examples, not defects.
-
-The dangling-conjunction rule checks list markers at the start of a line with zero to three leading spaces and ASCII spaces after the marker. It supports unordered markers `-`, `*`, and `+`, and ordered numeric markers that end in `.` or `)`, such as `1.` or `1)`. It checks indented continuation lines up to the final meaningful line. It does not parse list syntax inside blockquotes, lazy continuation, or full nested-list semantics. A standalone line with four or more leading spaces is not treated as a list marker. Within an active list item, indentation at the computed content column is treated as continuation text. Fence detection follows the linter's existing simple rule: a stripped line beginning with three backticks or three tildes toggles the fence state.
-
-The intentionally invalid examples/linter-edge-cases.md file demonstrates incomplete Markdown list items. Run python scripts/ste-lint.py examples/linter-edge-cases.md to confirm that the linter reports the two expected findings. The file is a test fixture and should not be used as compliant STE prose.
-
-It does **not** reproduce ASD's official ~900-word approved dictionary. The standard is free to obtain but not free to redistribute: Issue 9 permits reproduction only with ASD's written authority, or by eight listed categories of organisation that this project does not belong to. This skill applies the underlying *principle* (plainest available word, used the same way every time) rather than checking against a fixed word list. For certified STE-compliant documentation, use the real standard.
-
-Full rule summary and citations: [`references/writing-rules.md`](references/writing-rules.md).
-
-## Installation
-
-### Quick Install (npx skills)
-
-The fastest way to install this skill is the [skills CLI](https://skills.sh/) — no clone, no path setup. Run it from your project root:
+O `scripts/ste-lint.py` é um linter determinístico, só com a biblioteca padrão do Python. Ele verifica as regras estruturais, que são mecânicas: dá para apontar a palavra ou o sinal que quebra cada uma. As regras que dependem do dicionário do ASD ficam como recomendação. As que pedem bom senso ficam com você.
 
 ```bash
-npx skills add danyuchn/asd-ste100-skill
+python scripts/ste-lint.py ARQUIVO.md             # idioma detectado por arquivo
+python scripts/ste-lint.py --lang pt ARQUIVO.md   # força o perfil pt-BR
+echo "texto" | python scripts/ste-lint.py --json  # saída estruturada
+python scripts/ste-lint.py --baseline 5 ARQUIVO   # tolera 5 violações graves
+python scripts/ste-lint.py --disable passive-voice,present-perfect ARQUIVO
+python scripts/ste-lint.py --selftest
 ```
 
-This pulls the skill from the GitHub repo and installs it for the current project. The CLI sends anonymous install telemetry (skill name and timestamp, no personal or device information) to help rank skills on the skills.sh leaderboard. Set `DISABLE_TELEMETRY=1` to opt out.
+| Regra | Inglês | Português | Nível |
+|---|---|---|---|
+| `semicolon` | `;` | `;` | grave |
+| `long-sentence` | mais de 25 palavras | mais de 25 palavras | grave |
+| `phrasal-verb` | spin up, reach out, dive into, kick off… | fazer uso de, dar início a, entrar em contato, a fim de… | grave |
+| `nominalization` | perform an analysis of | realizar a validação, proceder à análise | grave |
+| `marketing-adjective` | seamless, robust, cutting-edge… | robusto, poderoso, de ponta, fluido… | grave |
+| `gerundism` | não se aplica | vou estar enviando, estaremos analisando | grave |
+| `synonym-rotation` | check/verify/confirm… | verificar/conferir/validar…, já conjugados | grave |
+| `dangling-conjunction` | item de lista que termina em and/or | item de lista que termina em e/ou | grave |
+| `passive-voice` | is removed | foi removido, recomenda-se | aviso |
+| `present-perfect` | has run | tem falhado, tenha sido gerado | aviso |
 
-Update later with `npx skills update`.
+Violações graves fazem o linter sair com código 1 quando passam do `--baseline` (padrão 0). Avisos nunca reprovam a execução. As IDs das regras são as mesmas nos dois idiomas, então `--disable` vale para os dois.
 
-### Clone
+O linter **nunca** aponta ressalvas nem modalidade ("may have failed", "pode ter falhado", "pode estar falhando", "talvez"). A confiança do autor faz parte do conteúdo. Uma reescrita que transforma uma suspeita em fato muda o que o texto afirma.
+
+### Limites do linter
+
+- Ele verifica padrões estruturais. Não compara o original com a reescrita e não prova que o sentido ficou igual. Zero violações quer dizer apenas que as checagens configuradas não acharam problema.
+- Não verifica grupo nominal longo (precisa de análise gramatical). Em português, também não verifica cadeia de "de", sujeito oculto ambíguo nem "o mesmo" como pronome.
+- Só conhece as locuções da sua lista. "take off the panel" passa sem aviso.
+- O idioma é detectado pela contagem de palavras funcionais ("não", "que", "para" contra "the", "and", "of"). Em empate, o linter usa inglês.
+- A regra `dangling-conjunction` lê listas Markdown com marcador `-`, `*`, `+`, `1.` ou `1)`, com zero a três espaços antes. Ela não lê listas dentro de citação nem toda a semântica de listas aninhadas. O arquivo [`examples/linter-edge-cases.md`](examples/linter-edge-cases.md) é um caso de teste inválido de propósito. `python scripts/ste-lint.py examples/linter-edge-cases.md` deve apontar duas violações.
+
+A própria documentação da skill não passa limpa no linter: as tabelas citam os padrões que proíbem, e algumas frases são longas. Use `python scripts/ste-lint.py --baseline 41 SKILL.md` e leia o resultado como exemplo, não como defeito.
+
+## O dicionário oficial fica de fora
+
+A skill **não** reproduz o dicionário oficial do ASD, com cerca de 900 palavras aprovadas. O padrão é gratuito, mas não pode ser redistribuído. A Issue 9 só permite reprodução com autorização escrita do ASD ou por oito categorias de organização, e este projeto não está em nenhuma delas. A skill aplica o *princípio* do dicionário: a palavra mais simples disponível, usada sempre do mesmo jeito. Para documentação com conformidade STE certificada, use o padrão oficial.
+
+O STE é um padrão para inglês e não tem versão oficial em português. O perfil pt-BR adapta as regras estruturais. As regras lexicais valem só como direção.
+
+Resumo completo das regras e fontes: [`references/writing-rules.md`](references/writing-rules.md) (inglês) e [`references/ptbr.md`](references/ptbr.md) (pt-BR).
+
+## Instalação
+
+### Pelo CLI skills
 
 ```bash
-git clone https://github.com/danyuchn/asd-ste100-skill ~/.claude/skills/asd-ste100
+npx skills add gabriel-sousa99/asd-ste100-skill -g -a claude-code
 ```
 
-This clones the repo into `~/.claude/skills/`, making the skill available in every Claude Code project. Best for contributors and anyone who wants a live checkout that updates with `git pull`.
+O comando instala a skill para o Claude Code em todos os projetos. Para atualizar, rode `npx skills update`. O CLI envia telemetria anônima de instalação (nome da skill e horário). Para desligar, use `DISABLE_TELEMETRY=1`.
 
-## Usage
+O `npx skills update` apaga e recria a pasta da skill. Se você editar a skill localmente, faça commit e push antes de atualizar.
 
-Trigger with a request to simplify or clarify English text:
+### Por clone
+
+```bash
+git clone https://github.com/gabriel-sousa99/asd-ste100-skill ~/.claude/skills/asd-ste100
+```
+
+O clone deixa a skill disponível em todo projeto do Claude Code e atualiza com `git pull`. É a melhor opção para quem vai editar a skill.
+
+## Uso
+
+Peça para simplificar ou desambiguar um texto:
 
 ```
+Aplica STE100 nesta mensagem de erro: …
+Reescreve esta descrição de ferramenta para um agente não interpretar errado
 Disambiguate this tool description
-Rewrite this error message so an agent can't misparse it
-Apply ASD-STE100 to this instruction
 ```
 
-Or paste text and ask Claude to "disambiguate this" / "apply STE100 to this" / "reduce ambiguity in this output."
+Você recebe só o texto reescrito. Para ver as regras aplicadas, acrescente "mostra o diff" ou "explica as mudanças".
 
-You get the rewritten text back and nothing else. To see which rules were applied, add "show the diff" or "explain the changes" to the request.
+## Escopo
 
-## Scope
+Feita para: mensagens entre agentes, descrições de ferramentas e funções, mensagens de erro, prompts de sistema e qualquer texto que uma máquina ou um leitor não nativo precisa ler sem poder perguntar.
 
-Built for: agent-to-agent messages, tool/function descriptions, error messages, system prompts, inter-agent instructions — any English text a machine or non-native reader has to parse without a human to ask.
+Não é para: texto criativo, texto de marketing ou qualquer texto em que a voz e a nuance são o objetivo. O STE é plano e literal de propósito.
 
-Not built for: creative writing, marketing copy, or anything where voice and nuance are the point — STE is deliberately flat and literal by design.
+Para eliminar LLM-ês de documentos que pessoas leem (ADR, spec, descrição de MR, Jira), use uma skill de escrita técnica, como a `unimed-vr-escrita-tecnica`.
 
-One limit worth stating up front: this fixes the form of a text, not its substance. A paragraph with nothing to say comes out short, clean, and still empty.
+Um limite vale desde já: a skill corrige a forma do texto, não o conteúdo. Um parágrafo sem nada a dizer sai curto, limpo e ainda vazio.
 
-## Sources
+## Fontes
 
-- [ASD-STE100 official site](https://www.asd-ste100.org/)
-- [ASD-STE100 — About STE](https://www.asd-ste100.org/about_STE.html)
-- [ASD Europe — Simplified Technical English](https://www.asd-europe.org/standards-specifications/simplified-technical-english/)
-- [Simplified Technical English — Wikipedia](https://en.wikipedia.org/wiki/Simplified_Technical_English)
-- [TechScribe — ASD-STE100 Simplified Technical English](https://www.techscribe.co.uk/techw/asd-simplified-technical-english.htm)
+- [Site oficial do ASD-STE100](https://www.asd-ste100.org/)
+- [ASD-STE100: sobre o STE](https://www.asd-ste100.org/about_STE.html)
+- [ASD Europe: Simplified Technical English](https://www.asd-europe.org/standards-specifications/simplified-technical-english/)
+- [Simplified Technical English na Wikipédia](https://en.wikipedia.org/wiki/Simplified_Technical_English)
+- [TechScribe: ASD-STE100 Simplified Technical English](https://www.techscribe.co.uk/techw/asd-simplified-technical-english.htm)
 
-## License
+## Licença
 
-MIT — see [LICENSE](LICENSE).
+MIT. Veja [LICENSE](LICENSE). Projeto original de Dustin Yuchen Teng ([danyuchn/asd-ste100-skill](https://github.com/danyuchn/asd-ste100-skill)).
