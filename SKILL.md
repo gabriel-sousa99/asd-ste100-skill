@@ -1,7 +1,7 @@
 ---
 name: asd-ste100
-description: "Use when English text must be parsed without a human to resolve ambiguity — tool descriptions, error messages, inter-agent instructions, system prompts, status reports — and misreading has a real cost, or when text reads as dense, hedged, or easy to misparse. Triggers: disambiguate, STE100 rewrite, apply Simplified Technical English, plain-language rewrite, controlled-language rewrite, rewrite so an agent cannot misread this. Not for creative or marketing copy."
-version: 0.4.0
+description: "Use when English or Brazilian Portuguese (pt-BR) text must be parsed without a human to resolve ambiguity — tool descriptions, error messages, inter-agent instructions, system prompts, status reports — and misreading has a real cost, or when text reads as dense, hedged, or easy to misparse. Triggers: disambiguate, STE100 rewrite, apply Simplified Technical English, plain-language rewrite, controlled-language rewrite, rewrite so an agent cannot misread this. Gatilhos em pt-BR: desambiguar, aplicar STE100, simplificar texto técnico, reescrever para um agente não interpretar errado, revisar descrição de ferramenta ou mensagem de erro. For pt-BR LLM-ês cleanup and document templates read by people (ADR, spec, MR, Jira), use unimed-vr-escrita-tecnica. Not for creative or marketing copy."
+version: 0.4.0+ptbr.1
 ---
 
 # Simplified Technical English (ASD-STE100)
@@ -28,6 +28,14 @@ Pick a mode before rewriting. If the user does not say which, infer it from the 
 **STE-flavored** — READMEs, PR descriptions, changelogs, explanatory prose. Apply the structural rules in full and treat the lexical rules as advisory (see Core Rewrite Rules for that split). In practice that means keeping the sentence length caps, active voice, simple tenses, no phrasal verbs, no semicolons, no nominalization and no marketing adjectives, while dropping the one-word-one-meaning lockdown: prose needs some range, and a strict rewrite of prose reads as a personality transplant rather than a clarification.
 
 The two modes and the structural/lexical split are the same distinction seen from two directions. The split says which rules this skill can verify without ASD's dictionary. The modes say which of them to enforce for a given kind of text.
+
+## Portuguese (pt-BR) Text
+
+STE is an English standard, and no official Portuguese version exists. For pt-BR input, read `references/ptbr.md` before the first rewrite in a session, then apply its adapted rules. The output stays in pt-BR. Never translate to English and back, because each translated word can change the meaning.
+
+The adapted rules map one-to-one to the structural rules below. Inflated verb phrases ("fazer uso de") take the place of phrasal verbs. Support verbs ("realizar a validação") take the place of nominalization. Gerundism ("vou estar enviando") is an extra rule. Four differences change the meaning in Portuguese and need a judgment call. They are the compound past ("tem falhado" means repeated failure), the dropped subject, the pronoun "o mesmo", and the "-se" passive. `references/ptbr.md` explains each one. Hedges stay protected: "pode ter falhado" and "pode estar falhando" are content.
+
+In pt-BR output, the `Kept as-is:` line becomes `Mantido como está:`, and the rule table uses the headers `Regra violada | Original | Simplificada`. Worked examples: `examples/antes-depois-ptbr.md`.
 
 ## Source and Scope
 
@@ -88,7 +96,7 @@ These six habits cover most of what makes machine-written English hard to parse.
 
 1. Pick the mode (Strict or STE-flavored). Say which only when the user asked for the rule table — see Output Format.
 2. Read the input text once for meaning — do not start rewriting before you understand what it must still say afterward.
-3. Walk it sentence by sentence. Flag every rule violation from the Core Rewrite Rules tables and every habit from the Scan Checklist. In STE-flavored mode, flag the lexical rules but do not enforce them. For a mechanical first pass over the structural rules, run `scripts/ste-lint.py` (stdin or file args, `--json` for structured output); it checks semicolons, sentence length, phrasal verbs, nominalization, marketing adjectives, synonym rotation, dangling-conjunction in supported list items, passive voice, and compound tenses, and by design never flags hedges or modality. `--baseline N` tolerates N hard violations (for adopting on existing docs); `--disable rule1,rule2` silences named rules.
+3. Walk it sentence by sentence. Flag every rule violation from the Core Rewrite Rules tables and every habit from the Scan Checklist. In STE-flavored mode, flag the lexical rules but do not enforce them. For a mechanical first pass over the structural rules, run `scripts/ste-lint.py` (stdin or file args, `--json` for structured output); it checks semicolons, sentence length, phrasal verbs, nominalization, marketing adjectives, synonym rotation, dangling-conjunction in supported list items, passive voice, and compound tenses, and by design never flags hedges or modality. The pt-BR profile also checks gerundism. It detects English or pt-BR per file. `--lang pt` or `--lang en` forces the profile. `--baseline N` tolerates N hard violations (for adopting on existing docs); `--disable rule1,rule2` silences named rules.
 4. Rewrite each flagged sentence to fix the violation while preserving the original meaning exactly. If a rewrite would drop necessary precision (a safety condition, a scope qualifier, a number), keep the longer phrasing and flag it instead of silently simplifying.
    - **Check modality before you commit to a rewrite.** Hedges ("may", "could", "sometimes", "is likely to") carry the author's confidence, and confidence is content. A shorter sentence that upgrades a hedge to a fact is not a simplification — it is a different claim. This is the most common way a well-intentioned STE rewrite goes wrong, because hedges are exactly what a length cap tempts you to cut.
    - Never add a fact the source did not state. A rewrite that reads better because it supplies a cause, a frequency, or a mechanism has stopped being a rewrite.
@@ -136,4 +144,6 @@ Follow the table with a one-line note on anything you deliberately did **not** s
 
 - **`references/writing-rules.md`** — fuller summary of the 9 rule sections and dictionary structure, with citations to the official standard and secondary sources.
 - **`examples/before-after.md`** — worked examples, including official STE examples and agent-output examples built for this skill.
-- **`scripts/ste-lint.py`** — deterministic, stdlib-only linter for the structural rules, including dangling-conjunction in supported list items, plus a synonym-rotation check (one word, one meaning) scoped per file. Exit 1 when hard violations exceed `--baseline` (default 0); advisory findings (passive voice, compound tenses) never fail the run; `--disable` silences named rules. It never flags hedges or modality: those are content, not style, and `--selftest` asserts that "may have failed" passes clean.
+- **`references/ptbr.md`** — the structural rules adapted to Brazilian Portuguese, the differences that change meaning, and the limits of the pt-BR linter profile.
+- **`examples/antes-depois-ptbr.md`** — pt-BR worked examples: an error message, a tool description, and an inter-agent instruction.
+- **`scripts/ste-lint.py`** — deterministic, stdlib-only linter for the structural rules, including dangling-conjunction in supported list items, plus a synonym-rotation check (one word, one meaning) scoped per file. It has an English and a pt-BR profile with the same rule IDs. Exit 1 when hard violations exceed `--baseline` (default 0); advisory findings (passive voice, compound tenses) never fail the run; `--disable` silences named rules. It never flags hedges or modality: those are content, not style, and `--selftest` asserts that "may have failed" passes clean.

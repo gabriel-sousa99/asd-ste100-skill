@@ -128,7 +128,7 @@ RULES_PT = [
     ("present-perfect", "advisory",
      # "pode ter falhado" usa o infinitivo "ter" e não casa: a ressalva fica protegida.
      re.compile(r"\b(?:tem|têm|tenho|temos|tinha|tinhas|tinham|tínhamos|havia|haviam"
-                r"|terá|terão|teria|teriam|tiver|tiverem|tivesse|tivessem)\s+"
+                r"|tenha|tenham|tenhamos|terá|terão|teria|teriam|tiver|tiverem|tivesse|tivessem)\s+"
                 r"(?:sido\s+)?(?:sido|" + PT_PARTICIPLE + r")\b", re.I),
      "Tempo composto. Use o passado ou o presente simples, a menos que o sentido de repetição ou continuidade importe (aí mantenha e sinalize)."),
 ]
@@ -636,6 +636,7 @@ def selftest_pt():
     assert rot == ["confira", "removido"], rot
     assert any(f["rule"] == "passive-voice" and f["match"] == "foi excluído"
                for f in findings), findings
+    assert "present-perfect" in rules_of("Desde que nenhum erro tenha sido gerado.")
     assert "gerundism" in rules_of("Estaremos analisando o pedido.")
     assert "nominalization" in rules_of("Proceda à validação do arquivo.")
     assert "nominalization" in rules_of("O sistema realiza o processamento do lote.")
